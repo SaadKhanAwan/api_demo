@@ -32,9 +32,15 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            controller.loadVideos();
-            controller.loadRatedVideos();
+            controller.loadVideos(
+              chart: 'mostPopular',
+              id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+            );
+            controller.loadRatedVideos(
+              id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+            );
           },
+          tooltip: 'Refresh Videos',
           child: const Icon(Icons.refresh),
         ),
       ),
@@ -47,18 +53,32 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
         return const Center(child: CircularProgressIndicator());
       }
 
-      if (controller.error.isNotEmpty) {
+      if (controller.error.value.isNotEmpty) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Error: ${controller.error.value}',
-                style: const TextStyle(color: Colors.red),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Error: ${controller.error.value}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              ElevatedButton(
-                onPressed: controller.loadVideos,
-                child: const Text('Retry'),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  controller.clearError();
+                  controller.loadVideos(
+                    chart: 'mostPopular',
+                    id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Load Sample Videos'),
               ),
             ],
           ),
@@ -66,19 +86,85 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
       }
 
       if (controller.videos.isEmpty) {
-        return const Center(child: Text('No videos found'));
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'No videos found',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => controller.loadVideos(chart: 'mostPopular'),
+                    icon: const Icon(Icons.trending_up),
+                    label: const Text('Load Popular'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => controller.loadVideos(
+                      id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+                    ),
+                    icon: const Icon(Icons.video_library),
+                    label: const Text('Load Samples'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
       }
 
-      return ListView.builder(
-        itemCount: controller.videos.length,
-        itemBuilder: (context, index) {
-          final video = controller.videos[index];
-          return VideoListItem(
-            video: video,
-            onDelete: () => controller.deleteVideo(video.id),
-            onRate: (rating) => controller.rateVideo(video.id, rating),
-          );
-        },
+      return RefreshIndicator(
+        onRefresh: () => controller.loadVideos(
+          chart: 'mostPopular',
+          id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: controller.videos.length,
+          itemBuilder: (context, index) {
+            final video = controller.videos[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: ListTile(
+                leading: video.snippet.thumbnails.defaultThumbnail?.url != null
+                    ? Image.network(
+                        video.snippet.thumbnails.defaultThumbnail!.url,
+                        width: 120,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.error),
+                      )
+                    : const Icon(Icons.video_library),
+                title: Text(
+                  video.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      video.snippet.channelTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${video.statistics.viewCount} views',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                onTap: () => controller.selectVideo(video),
+              ),
+            );
+          },
+        ),
       );
     });
   }
@@ -89,18 +175,31 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
         return const Center(child: CircularProgressIndicator());
       }
 
-      if (controller.error.isNotEmpty) {
+      if (controller.error.value.isNotEmpty) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Error: ${controller.error.value}',
-                style: const TextStyle(color: Colors.red),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Error: ${controller.error.value}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              ElevatedButton(
-                onPressed: controller.loadRatedVideos,
-                child: const Text('Retry'),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  controller.clearError();
+                  controller.loadRatedVideos(
+                    id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Load Rated Videos'),
               ),
             ],
           ),
@@ -108,19 +207,86 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
       }
 
       if (controller.ratedVideos.isEmpty) {
-        return const Center(child: Text('No rated videos found'));
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'No rated videos found',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => controller.loadRatedVideos(
+               
+                  id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+                ),
+                icon: const Icon(Icons.thumb_up),
+                label: const Text('Load Sample Rated Videos'),
+              ),
+            ],
+          ),
+        );
       }
 
-      return ListView.builder(
-        itemCount: controller.ratedVideos.length,
-        itemBuilder: (context, index) {
-          final video = controller.ratedVideos[index];
-          return VideoListItem(
-            video: video,
-            onDelete: () => controller.deleteVideo(video.id),
-            onRate: (rating) => controller.rateVideo(video.id, rating),
-          );
-        },
+      return RefreshIndicator(
+        onRefresh: () => controller.loadRatedVideos(
+          id: YouTubeVideoViewModel.sampleVideoIds.join(','),
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: controller.ratedVideos.length,
+          itemBuilder: (context, index) {
+            final video = controller.ratedVideos[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: ListTile(
+                leading: video.snippet.thumbnails.defaultThumbnail?.url != null
+                    ? Image.network(
+                        video.snippet.thumbnails.defaultThumbnail!.url,
+                        width: 120,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.error),
+                      )
+                    : const Icon(Icons.video_library),
+                title: Text(
+                  video.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      video.snippet.channelTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '${video.statistics.viewCount} views',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          video.rating == 'like'
+                              ? Icons.thumb_up
+                              : Icons.thumb_down,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                onTap: () => controller.selectVideo(video),
+              ),
+            );
+          },
+        ),
       );
     });
   }
@@ -143,9 +309,9 @@ class VideoListItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: Text(video.title ?? 'Untitled Video'),
+        title: Text(video.snippet.title),
         subtitle: Text(
-          video.description ?? 'No description',
+          video.snippet.description,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),

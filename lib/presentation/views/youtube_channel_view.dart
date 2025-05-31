@@ -5,6 +5,7 @@ import '../../data/models/youtube_channel.dart';
 import 'youtube_video_view.dart';
 import 'channel_section_view.dart';
 import 'video_category_view.dart';
+import 'youtube_playlist_view.dart';
 
 class YouTubeChannelView extends GetView<YouTubeChannelViewModel> {
   const YouTubeChannelView({Key? key}) : super(key: key);
@@ -14,23 +15,79 @@ class YouTubeChannelView extends GetView<YouTubeChannelViewModel> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('YouTube Channels'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.video_library),
-            onPressed: () => Get.to(() => const YouTubeVideoView()),
-            tooltip: 'Manage Videos',
-          ),
-          IconButton(
-            icon: const Icon(Icons.view_module),
-            onPressed: () => Get.to(() => const ChannelSectionView()),
-            tooltip: 'Manage Sections',
-          ),
-          IconButton(
-            icon: const Icon(Icons.category),
-            onPressed: () => Get.to(() => const VideoCategoryView()),
-            tooltip: 'Video Categories',
-          ),
-        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'YouTube Manager',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Manage your YouTube content',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_circle),
+              title: const Text('Channels'),
+              selected: true,
+              onTap: () {
+                Get.back();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library),
+              title: const Text('Videos'),
+              onTap: () {
+                Get.back();
+                Get.to(() => const YouTubeVideoView());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.playlist_play),
+              title: const Text('Playlists'),
+              onTap: () {
+                Get.back();
+                Get.to(() => const YouTubePlaylistView());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.view_module),
+              title: const Text('Channel Sections'),
+              onTap: () {
+                Get.back();
+                Get.to(() => const ChannelSectionView());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('Video Categories'),
+              onTap: () {
+                Get.back();
+                Get.to(() => const VideoCategoryView());
+              },
+            ),
+          ],
+        ),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -62,8 +119,8 @@ class YouTubeChannelView extends GetView<YouTubeChannelViewModel> {
               children: [
                 const Text('No channels found'),
                 ElevatedButton(
-                  onPressed: controller.loadChannels,
-                  child: const Text('Refresh'),
+                  onPressed: () => controller.loadChannels(),
+                  child: const Text('Load Channels'),
                 ),
               ],
             ),
@@ -74,29 +131,20 @@ class YouTubeChannelView extends GetView<YouTubeChannelViewModel> {
           itemCount: controller.channels.length,
           itemBuilder: (context, index) {
             final channel = controller.channels[index];
-            return ChannelListItem(
-              channel: channel,
-              onTap: () => controller.selectChannel(channel),
-            );
+            return ChannelItem(channel: channel);
           },
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: controller.loadChannels,
-        child: const Icon(Icons.refresh),
-      ),
     );
   }
 }
 
-class ChannelListItem extends StatelessWidget {
+class ChannelItem extends StatelessWidget {
   final YouTubeChannel channel;
-  final VoidCallback onTap;
 
-  const ChannelListItem({
+  const ChannelItem({
     Key? key,
     required this.channel,
-    required this.onTap,
   }) : super(key: key);
 
   @override
@@ -104,13 +152,44 @@ class ChannelListItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: Text(channel.channelId),
-        subtitle: Text(
-          channel.brandingSettings?.channel.description ?? 'No description',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        leading: channel.snippet.thumbnails.defaultThumbnail != null
+            ? Image.network(
+                channel.snippet.thumbnails.defaultThumbnail!.url,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+              )
+            : const CircleAvatar(child: Icon(Icons.account_circle)),
+        title: Text(channel.snippet.title),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              channel.snippet.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.people, size: 16, color: Theme.of(context).hintColor),
+                const SizedBox(width: 4),
+                Text(
+                  '${channel.statistics.subscriberCount} subscribers',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.video_library, size: 16, color: Theme.of(context).hintColor),
+                const SizedBox(width: 4),
+                Text(
+                  '${channel.statistics.videoCount} videos',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ],
         ),
-        onTap: onTap,
+        onTap: () => Get.find<YouTubeChannelViewModel>().selectChannel(channel),
       ),
     );
   }

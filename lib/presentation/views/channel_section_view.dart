@@ -116,6 +116,34 @@ class ChannelSectionView extends GetView<ChannelSectionViewModel> {
       text: isEditing ? section.snippet.position.toString() : '0',
     );
     final selectedType = (isEditing ? section.snippet.type : ChannelSectionType.singlePlaylist).obs;
+    
+    // Controllers for playlists and channels
+    final playlistController = TextEditingController(
+      text: isEditing && section.contentDetails?.playlists.isNotEmpty == true
+          ? section.contentDetails!.playlists.join(',')
+          : '',
+    );
+    final channelController = TextEditingController(
+      text: isEditing && section.contentDetails?.channels.isNotEmpty == true
+          ? section.contentDetails!.channels.join(',')
+          : '',
+    );
+
+    bool requiresPlaylists(ChannelSectionType type) {
+      return [
+        ChannelSectionType.singlePlaylist,
+        ChannelSectionType.multiplePlaylists,
+        ChannelSectionType.allPlaylists,
+        ChannelSectionType.likedPlaylists,
+      ].contains(type);
+    }
+
+    bool requiresChannels(ChannelSectionType type) {
+      return [
+        ChannelSectionType.multipleChannels,
+        ChannelSectionType.subscriptions,
+      ].contains(type);
+    }
 
     showDialog(
       context: context,
@@ -148,6 +176,25 @@ class ChannelSectionView extends GetView<ChannelSectionViewModel> {
                   if (value != null) selectedType.value = value;
                 },
               )),
+              const SizedBox(height: 16),
+              Obx(() => requiresPlaylists(selectedType.value)
+                  ? TextField(
+                      controller: playlistController,
+                      decoration: const InputDecoration(
+                        labelText: 'Playlist IDs',
+                        helperText: 'Comma-separated playlist IDs',
+                      ),
+                    )
+                  : const SizedBox()),
+              Obx(() => requiresChannels(selectedType.value)
+                  ? TextField(
+                      controller: channelController,
+                      decoration: const InputDecoration(
+                        labelText: 'Channel IDs',
+                        helperText: 'Comma-separated channel IDs',
+                      ),
+                    )
+                  : const SizedBox()),
             ],
           ),
         ),
@@ -158,16 +205,43 @@ class ChannelSectionView extends GetView<ChannelSectionViewModel> {
           ),
           TextButton(
             onPressed: () {
+              // Validate required fields based on type
+              if (titleController.text.isEmpty) {
+                Get.snackbar('Error', 'Title is required');
+                return;
+              }
+
+              if (requiresPlaylists(selectedType.value) && playlistController.text.isEmpty) {
+                Get.snackbar('Error', 'Playlist IDs are required for this section type');
+                return;
+              }
+
+              if (requiresChannels(selectedType.value) && channelController.text.isEmpty) {
+                Get.snackbar('Error', 'Channel IDs are required for this section type');
+                return;
+              }
+
+              final playlists = playlistController.text.isEmpty
+                  ? <String>[]
+                  : playlistController.text.split(',').map((e) => e.trim()).toList();
+              
+              final channels = channelController.text.isEmpty
+                  ? <String>[]
+                  : channelController.text.split(',').map((e) => e.trim()).toList();
+
               final newSection = ChannelSection(
                 id: section?.id,
+                etag: section?.etag ?? '',
+                kind: section?.kind ?? 'youtube#channelSection',
                 snippet: ChannelSectionSnippet(
+                  channelId: section?.snippet.channelId ?? ChannelSectionViewModel.sampleChannelIds[0],
                   type: selectedType.value,
                   title: titleController.text,
                   position: int.tryParse(positionController.text) ?? 0,
                 ),
                 contentDetails: ChannelSectionContentDetails(
-                  playlists: section?.contentDetails.playlists ?? [],
-                  channels: section?.contentDetails.channels ?? [],
+                  playlists: playlists,
+                  channels: channels,
                 ),
               );
 
@@ -209,10 +283,10 @@ class ChannelSectionItem extends StatelessWidget {
           children: [
             Text('Type: ${section.snippet.type.name}'),
             Text('Position: ${section.snippet.position}'),
-            if (section.contentDetails.playlists.isNotEmpty)
-              Text('Playlists: ${section.contentDetails.playlists.length}'),
-            if (section.contentDetails.channels.isNotEmpty)
-              Text('Channels: ${section.contentDetails.channels.length}'),
+            if (section.contentDetails?.playlists.isNotEmpty == true)
+              Text('Playlists: ${section.contentDetails!.playlists.length}'),
+            if (section.contentDetails?.channels.isNotEmpty == true)
+              Text('Channels: ${section.contentDetails!.channels.length}'),
           ],
         ),
         trailing: Row(
