@@ -38,6 +38,7 @@ class YouTubePlaylist {
 
   factory YouTubePlaylist.fromJson(Map<String, dynamic> json) {
     final snippet = json['snippet'] ?? {};
+    final status = json['status'] ?? {};
     final contentDetails = json['contentDetails'] ?? {};
     final thumbnails = snippet['thumbnails'] ?? {};
     final defaultThumb = thumbnails['default'] ?? {};
@@ -46,7 +47,7 @@ class YouTubePlaylist {
       id: json['id'],
       title: snippet['title'] ?? '',
       description: snippet['description'] ?? '',
-      privacyStatus: PlaylistPrivacyStatus.fromJson(json['status'] ?? 'private'),
+      privacyStatus: PlaylistPrivacyStatus.fromJson(status['privacyStatus'] ?? 'private'),
       channelId: snippet['channelId'],
       itemCount: contentDetails['itemCount'],
       thumbnailUrl: defaultThumb['url'],
@@ -62,8 +63,15 @@ class YouTubePlaylist {
         'description': description,
         if (channelId != null) 'channelId': channelId,
         if (publishedAt != null) 'publishedAt': publishedAt,
+        if (thumbnailUrl != null) 'thumbnails': {
+          'default': {
+            'url': thumbnailUrl,
+          },
+        },
       },
-      'status': privacyStatus.name,
+      'status': {
+        'privacyStatus': privacyStatus.name,
+      },
       'contentDetails': {
         if (itemCount != null) 'itemCount': itemCount,
       },
@@ -74,19 +82,19 @@ class YouTubePlaylist {
 class YouTubePlaylistResponse {
   final String code;
   final String msg;
-  final YouTubePlaylist? data;
+  final Map<String, dynamic> data;
 
   YouTubePlaylistResponse({
     required this.code,
     required this.msg,
-    this.data,
+    required this.data,
   });
 
   factory YouTubePlaylistResponse.fromJson(Map<String, dynamic> json) {
     return YouTubePlaylistResponse(
       code: json['code']?.toString() ?? '',
       msg: json['msg'] ?? '',
-      data: json['data'] != null ? YouTubePlaylist.fromJson(json['data']) : null,
+      data: json['data'] as Map<String, dynamic>? ?? {},
     );
   }
 }

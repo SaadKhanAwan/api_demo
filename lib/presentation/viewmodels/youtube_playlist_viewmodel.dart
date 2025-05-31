@@ -68,26 +68,33 @@ class YouTubePlaylistViewModel extends BaseViewModel {
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        developer.log('Playlist list response: ${jsonResponse}');
+        developer.log('Playlist list response: $jsonResponse');
 
         if (jsonResponse['code'] == 0 || jsonResponse['code'] == '0') {
-          if (jsonResponse['data'] != null && jsonResponse['data'] is Map) {
-            final data = jsonResponse['data'] as Map<String, dynamic>;
-            if (data['items'] != null) {
-              final items = List<Map<String, dynamic>>.from(data['items']);
-              playlists.value = items.map((item) => YouTubePlaylist.fromJson(item)).toList();
-              nextPageToken.value = data['nextPageToken'] ?? '';
-              prevPageToken.value = data['prevPageToken'] ?? '';
-              if (data['pageInfo'] != null) {
-                pageInfo.value = PageInfo.fromJson(data['pageInfo']);
-              }
-              developer.log('Successfully loaded ${playlists.length} playlists');
-            } else {
-              developer.log('No items found in response data');
-              playlists.clear();
+          final data = jsonResponse['data'] ?? {};
+          
+          // Handle empty data case
+          if (data.isEmpty) {
+            developer.log('No data returned from API');
+            playlists.clear();
+            nextPageToken.value = '';
+            prevPageToken.value = '';
+            pageInfo.value = PageInfo(totalResults: 0, resultsPerPage: 0);
+            return;
+          }
+
+          // Parse items if they exist
+          if (data['items'] != null && data['items'] is List) {
+            final items = List<Map<String, dynamic>>.from(data['items']);
+            playlists.value = items.map((item) => YouTubePlaylist.fromJson(item)).toList();
+            nextPageToken.value = data['nextPageToken'] ?? '';
+            prevPageToken.value = data['prevPageToken'] ?? '';
+            if (data['pageInfo'] != null) {
+              pageInfo.value = PageInfo.fromJson(data['pageInfo']);
             }
+            developer.log('Successfully loaded ${playlists.length} playlists');
           } else {
-            developer.log('Response data is null or not a map');
+            developer.log('No items found in response data');
             playlists.clear();
           }
         } else {
