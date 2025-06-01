@@ -4,8 +4,6 @@ import 'package:get/get.dart';
 import '../../core/api_client.dart';
 import '../../core/base_view_model.dart';
 import '../../data/models/channel_section.dart';
-import '../../data/models/channel_section_response.dart';
-
 class ChannelSectionViewModel extends BaseViewModel {
   final ApiClient _apiClient;
   

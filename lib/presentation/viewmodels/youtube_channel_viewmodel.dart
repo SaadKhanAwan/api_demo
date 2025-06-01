@@ -22,11 +22,21 @@ class YouTubeChannelViewModel extends BaseViewModel {
   YouTubeChannelViewModel({required ApiClient apiClient})
       : _apiClient = apiClient;
 
-  Future<void> loadChannels({bool? mine, String? handle, String? userName, String? id}) async {
+  Future<void> loadChannels({
+    bool? mine,
+    String? handle,
+    String? userName,
+    String? id,
+  }) async {
     try {
       setLoading(true);
       clearError();
       
+      // Validate that at least one filter parameter is provided
+      if (mine == null && handle == null && userName == null && id == null) {
+        throw Exception('At least one filter parameter (mine, handle, userName, or id) must be specified');
+      }
+
       final queryParams = {
         if (mine != null) 'mine': mine.toString(),
         if (handle != null) 'handle': handle,

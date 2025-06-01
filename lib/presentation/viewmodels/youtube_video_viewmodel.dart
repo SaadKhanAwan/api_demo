@@ -6,7 +6,6 @@ import '../../core/base_view_model.dart';
 import '../../data/models/youtube_video.dart';
 import '../../data/models/youtube_video_response.dart';
 import '../../data/models/youtube_rated_video_response.dart';
-import '../../data/models/youtube_video_upload.dart';
 import '../../data/models/youtube_video_category.dart';
 
 class YouTubeVideoViewModel extends BaseViewModel {
@@ -348,51 +347,45 @@ class YouTubeVideoViewModel extends BaseViewModel {
       setLoading(true);
       clearError();
 
-      developer.log('Attempting to upload video', error: {
-        'filePath': filePath,
-        'title': title,
-        'description': description,
-        'keywords': keywords,
-        'categoryId': categoryId,
-        'privacyStatus': privacyStatus,
-      });
+      developer.log('Attempting to upload video');
 
-      final request = YouTubeVideoUploadRequest(
-        file: filePath,
-        title: title,
-        description: description,
-        keywords: keywords,
-        categoryId: categoryId,
-        privacyStatus: privacyStatus,
-      );
+      final fields = <String, String>{
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (keywords != null) 'keywords': keywords.join(','),
+        if (categoryId != null) 'categoryId': categoryId,
+        if (privacyStatus != null) 'privacyStatus': privacyStatus,
+      };
 
-      final response = await _apiClient.post(
+      final response = await _apiClient.uploadFile(
         '/plat/youtube/videos/upload',
-        body: json.encode(request.toJson()),
+        filePath: filePath,
+        fields: fields,
       );
 
-      if (response.statusCode == 200) {
+      developer.log('Upload response status: ${response.statusCode}');
+      developer.log('Upload response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonResponse = json.decode(response.body);
-        developer.log('Upload video response: ${response.body}');
         
-        final uploadResponse = YouTubeVideoUploadResponse.fromJson(jsonResponse);
-        
-        if (uploadResponse.code == '0') {
-          developer.log('Successfully uploaded video with ID: ${uploadResponse.videoId}');
-          
-          // Refresh the video list to include the new video
-          await loadVideos(id: uploadResponse.videoId);
-          
-          return uploadResponse.videoId;
+        if (jsonResponse['code'] == 0 || jsonResponse['code'] == '0') {
+          final videoId = jsonResponse['data']?['videoId'];
+          if (videoId != null) {
+            developer.log('Successfully uploaded video with ID: $videoId');
+            
+            // Refresh the video list to include the new video
+            await loadVideos(id: videoId);
+            
+            return videoId;
+          } else {
+            throw Exception('Video ID not found in response');
+          }
         } else {
-          final errorMsg = 'Failed to upload video: ${uploadResponse.msg}';
-          developer.log(errorMsg);
-          throw Exception(errorMsg);
+          throw Exception('Failed to upload video: ${jsonResponse['msg']}');
         }
       } else {
-        final errorMsg = 'Failed to upload video: ${response.reasonPhrase}';
-        developer.log(errorMsg, error: response.statusCode);
-        throw Exception(errorMsg);
+        throw Exception('Failed to upload video: ${response.reasonPhrase}');
       }
     } catch (e, stackTrace) {
       developer.log('Error uploading video', error: e, stackTrace: stackTrace);

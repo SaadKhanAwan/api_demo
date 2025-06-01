@@ -2,9 +2,133 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/youtube_video.dart';
 import '../viewmodels/youtube_video_viewmodel.dart';
+import 'package:file_picker/file_picker.dart';
 
 class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
   const YouTubeVideoView({Key? key}) : super(key: key);
+
+  void _showUploadDialog(BuildContext context) async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final categoryController = TextEditingController();
+    final privacyStatus = 'private'.obs;
+    String? selectedFilePath;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Upload Video'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  FilePickerResult? result = await FilePicker.platform.pickFiles(
+                    type: FileType.video,
+                    allowMultiple: false,
+                  );
+                  
+                  if (result != null) {
+                    selectedFilePath = result.files.single.path;
+                    Get.snackbar(
+                      'Success',
+                      'Video file selected',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Select Video File'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Enter video title',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Enter video description',
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category ID',
+                  hintText: 'Enter video category ID',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              Obx(() => DropdownButtonFormField<String>(
+                value: privacyStatus.value,
+                decoration: const InputDecoration(
+                  labelText: 'Privacy Status',
+                ),
+                items: ['private', 'public', 'unlisted'].map((status) {
+                  return DropdownMenuItem(
+                    value: status,
+                    child: Text(status.capitalize!),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) privacyStatus.value = value;
+                },
+              )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (selectedFilePath == null) {
+                Get.snackbar(
+                  'Error',
+                  'Please select a video file',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+                return;
+              }
+              if (titleController.text.isEmpty) {
+                Get.snackbar(
+                  'Error',
+                  'Title is required',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+                return;
+              }
+
+              final videoId = await controller.uploadVideo(
+                filePath: selectedFilePath!,
+                title: titleController.text,
+                description: descriptionController.text,
+                categoryId: categoryController.text.isNotEmpty ? categoryController.text : null,
+                privacyStatus: privacyStatus.value,
+              );
+
+              if (videoId != null) {
+                Get.back();
+                controller.loadVideos(id: videoId);
+              }
+            },
+            child: const Text('Upload'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +141,13 @@ class YouTubeVideoView extends GetView<YouTubeVideoViewModel> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Get.back(),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.upload),
+              onPressed: () => _showUploadDialog(context),
+              tooltip: 'Upload Video',
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'All Videos'),

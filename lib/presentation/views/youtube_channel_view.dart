@@ -117,10 +117,28 @@ class YouTubeChannelView extends GetView<YouTubeChannelViewModel> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('No channels found'),
-                ElevatedButton(
-                  onPressed: () => controller.loadChannels(),
-                  child: const Text('Load Channels'),
+                const Text(
+                  'No channels found',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => controller.loadMyChannels(),
+                      icon: const Icon(Icons.account_circle),
+                      label: const Text('Load My Channels'),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => controller.loadChannelsByIds(
+                        YouTubeChannelViewModel.sampleChannelIds,
+                      ),
+                      icon: const Icon(Icons.video_library),
+                      label: const Text('Load Sample Channels'),
+                    ),
+                  ],
                 ),
               ],
             ),

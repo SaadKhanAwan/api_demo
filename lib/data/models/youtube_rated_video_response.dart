@@ -1,4 +1,3 @@
-import 'package:api_integration/data/models/youtube_video.dart';
 
 class YouTubeRatedVideoResponse {
   final List<RatedVideoItem> items;
